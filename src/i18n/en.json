@@ -26,6 +26,10 @@
     "directions": "Directions",
     "not_available": "N/A"
   },
+  "home": {
+    "mostVisitedGovernorates": "Most Visited Governorates",
+    "mostVisitedOffices": "Most Visited Offices"
+  },
   "auth": {
     "username": "Username",
     "password": "Password",

@@ -26,6 +26,10 @@
     "directions": "اتجاهات",
     "not_available": "غير متوفر"
   },
+  "home": {
+    "mostVisitedGovernorates": "المحافظات الأكثر زيارة",
+    "mostVisitedOffices": "المكاتب الأكثر زيارة"
+  },
   "auth": {
     "username": "اسم المستخدم",
     "password": "كلمة المرور",

@@ -13,7 +13,6 @@ const usefulInfo = ref(null);
 const { locale } = useI18n();
 
 const displayKeys = [
-  "postal_code",
   "atm",
   "stamp_service",
   "foreign_transfer",
@@ -24,7 +23,6 @@ const displayKeys = [
 
 const getLabel = (key) => {
   const labels = {
-    postal_code: { ar: "الرمز البريدي", en: "Postal Code" },
     atm: { ar: "صراف آلي (ATM)", en: "ATM Service" },
     stamp_service: { ar: "شباك بيع الطوابع", en: "Stamp Window" },
     foreign_transfer: { ar: "قبول حوالات من الخارج", en: "Foreign Transfers" },
@@ -135,7 +133,11 @@ onMounted(() => {
             &larr; {{ $t("common.governorates") }}
           </button>
           <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-            {{ office.name }}
+            {{
+              $i18n.locale === "ar"
+                ? office.name_ar || office.name
+                : office.name_en || office.name
+            }}
           </h1>
           <p class="text-gray-500 dark:text-gray-400 mt-2">
             {{ office.gov_code }}
@@ -161,7 +163,11 @@ onMounted(() => {
                     >{{ $t("office.address") }}</label
                   >
                   <p class="text-gray-900 dark:text-gray-100">
-                    {{ office.address }}
+                    {{
+                      $i18n.locale === "ar"
+                        ? office.address_ar || office.address
+                        : office.address_en || office.address
+                    }}
                   </p>
                 </div>
 
@@ -306,7 +312,11 @@ onMounted(() => {
               :x="office.x"
               :y="office.y"
               :readonly="true"
-              :popup-content="office.name"
+              :popup-content="
+                $i18n.locale === 'ar'
+                  ? office.name_ar || office.name
+                  : office.name_en || office.name
+              "
             />
           </div>
 

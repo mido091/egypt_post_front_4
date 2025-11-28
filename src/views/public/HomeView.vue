@@ -1,9 +1,17 @@
 <script setup>
 import { ref, computed, onMounted, watch, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
 import {
   MagnifyingGlassIcon,
   BuildingOfficeIcon,
+  MapPinIcon,
+  ArrowRightIcon,
+  ArrowLeftIcon,
 } from "@heroicons/vue/24/outline";
+import {
+  getMostVisitedGovernorates,
+  getMostVisitedOffices,
+} from "@/utils/randomSelection";
 import api from "@/api";
 import publicApi from "@/api/public";
 import { normalizeText, fuzzyMatch } from "@/utils/textNormalize";
@@ -12,10 +20,15 @@ import { useI18n } from "vue-i18n";
 
 const { t, locale } = useI18n();
 const settingsStore = useSettingsStore();
+const router = useRouter();
 const searchQuery = ref("");
 const governorates = ref({});
 const loading = ref(true);
 const totalOffices = ref(0);
+const showSuggestions = ref(false);
+const searchInputRef = ref(null);
+const mostVisitedGovs = ref([]);
+const mostVisitedOffices = ref([]);
 
 // About section
 const aboutLoading = ref(false);
@@ -81,6 +94,9 @@ const fetchGovernorates = async () => {
     );
 
     console.log("Loaded Govs:", governorates.value);
+
+    mostVisitedGovs.value = getMostVisitedGovernorates(governorates.value);
+    mostVisitedOffices.value = getMostVisitedOffices(governorates.value);
   } catch (error) {
     console.error("Failed to fetch governorates:", error);
   } finally {
@@ -106,6 +122,91 @@ const filteredGovs = computed(() => {
   return filtered;
 });
 
+const filteredSuggestions = computed(() => {
+  if (!searchQuery.value || searchQuery.value.length < 1) return [];
+
+  const query = normalizeText(searchQuery.value);
+  const suggestions = [];
+
+  Object.entries(governorates.value).forEach(([govName, offices]) => {
+    // 1. Check Governorate Name
+    const govMatch = fuzzyMatch(govName, query);
+    const nameMatch = normalizeText(govName).includes(query);
+
+    if (govMatch || nameMatch) {
+      const firstOffice = offices[0];
+      suggestions.push({
+        name: govName,
+        name_ar: firstOffice?.gov_name_ar || govName,
+        name_en: firstOffice?.gov_name_en || govName,
+        count: offices.length,
+        code: govName,
+        type: "governorate",
+      });
+    }
+
+    // 2. Check Offices inside this Governorate
+    offices.forEach((office) => {
+      const officeName = office.name;
+      const postalCode = office.postal_code
+        ? office.postal_code.toString()
+        : "";
+
+      const officeMatch =
+        fuzzyMatch(officeName, query) ||
+        normalizeText(officeName).includes(query);
+      const codeMatch = postalCode.includes(query);
+
+      if (officeMatch || codeMatch) {
+        suggestions.push({
+          name: officeName,
+          name_ar: office.name_ar || officeName,
+          name_en: office.name_en || officeName,
+          count: postalCode, // Show postal code for offices
+          code: office._id || office.id,
+          type: "office",
+          gov_name: govName,
+          gov_name_ar: office.gov_name_ar || govName,
+          gov_name_en: office.gov_name_en || govName,
+        });
+      }
+    });
+  });
+
+  return suggestions.slice(0, 8); // Limit to 8 suggestions
+});
+
+const selectSuggestion = (suggestion) => {
+  searchQuery.value = suggestion.name;
+  showSuggestions.value = false;
+
+  if (suggestion.type === "office") {
+    router.push({ name: "office-details", params: { id: suggestion.code } });
+  } else {
+    router.push({ name: "governorate", params: { code: suggestion.code } });
+  }
+};
+
+const handleSearchFocus = () => {
+  if (searchQuery.value && filteredSuggestions.value.length > 0) {
+    showSuggestions.value = true;
+  }
+};
+
+const handleSearchInput = () => {
+  if (searchQuery.value && filteredSuggestions.value.length > 0) {
+    showSuggestions.value = true;
+  } else {
+    showSuggestions.value = false;
+  }
+};
+
+const handleClickOutside = (event) => {
+  if (searchInputRef.value && !searchInputRef.value.contains(event.target)) {
+    showSuggestions.value = false;
+  }
+};
+
 // Hero title text
 const heroTitle = computed(() => {
   return locale.value === "ar"
@@ -116,6 +217,11 @@ const heroTitle = computed(() => {
 onMounted(() => {
   fetchGovernorates();
   fetchAboutContent();
+  document.addEventListener("click", handleClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener("click", handleClickOutside);
 });
 </script>
 
@@ -133,7 +239,7 @@ onMounted(() => {
           enter-to-class="opacity-100 translate-y-0 scale-100"
         >
           <div
-            class="inline-block px-8 py-6 rounded-2xl backdrop-blur-xs bg-white/5 dark:bg-black/10 shadow-lg relative z-30 w-fit mx-auto"
+            class="inline-block px-8 py-6 rounded-2xl bg-white/5 dark:bg-black/10 shadow-lg relative z-30 w-fit mx-auto"
           >
             <!-- background pattern -->
             <div
@@ -147,19 +253,103 @@ onMounted(() => {
             </h1>
 
             <!-- Search -->
-            <div class="max-w-2xl mx-auto relative z-20">
-              <div class="relative wave-ripple-container">
+            <div class="max-w-2xl mx-auto relative z-50" ref="searchInputRef">
+              <div class="relative">
                 <input
                   v-model="searchQuery"
                   type="text"
                   :placeholder="t('common.search_placeholder')"
-                  class="w-full px-6 py-4 rounded-full text-gray-900 focus:outline-none focus:ring-4 focus:ring-primary-400 shadow-md text-lg relative z-30 bg-white"
+                  class="w-full px-6 py-4 rounded-full text-gray-900 focus:outline-none focus:ring-4 focus:ring-primary-400 shadow-md text-lg relative z-10 bg-white"
+                  @input="handleSearchInput"
+                  @focus="handleSearchFocus"
                 />
                 <button
-                  class="absolute right-2 rtl:right-auto rtl:left-2 top-2 bg-primary-500 text-white p-2 rounded-full hover:bg-primary-600 transition-colors z-30"
+                  class="absolute right-2 rtl:right-auto rtl:left-2 top-2 bg-primary-500 text-white p-2 rounded-full hover:bg-primary-600 transition-colors z-20"
                 >
                   <MagnifyingGlassIcon class="h-6 w-6" />
                 </button>
+
+                <!-- Autocomplete Dropdown -->
+                <transition
+                  enter-active-class="transition duration-200 ease-out"
+                  enter-from-class="opacity-0 translate-y-2 scale-95"
+                  enter-to-class="opacity-100 translate-y-0 scale-100"
+                  leave-active-class="transition duration-150 ease-in"
+                  leave-from-class="opacity-100 translate-y-0 scale-100"
+                  leave-to-class="opacity-0 translate-y-2 scale-95"
+                >
+                  <div
+                    v-if="showSuggestions && filteredSuggestions.length > 0"
+                    class="absolute top-full left-0 right-0 mt-4 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-100/50 dark:border-gray-700/50 overflow-hidden z-50 max-h-96 overflow-y-auto ring-1 ring-black/5 dark:ring-white/5"
+                  >
+                    <div class="py-2">
+                      <div
+                        v-for="suggestion in filteredSuggestions"
+                        :key="suggestion.code"
+                        @click="selectSuggestion(suggestion)"
+                        class="px-4 py-3 mx-2 my-1 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-all duration-200 ease-out flex items-center justify-between group"
+                      >
+                        <div class="flex items-center gap-4">
+                          <div
+                            class="p-2.5 rounded-full bg-primary-50 dark:bg-gray-700/80 text-primary-600 dark:text-primary-400 group-hover:bg-primary-500 group-hover:text-white dark:group-hover:bg-primary-500 dark:group-hover:text-white transition-all duration-300 shadow-sm"
+                          >
+                            <BuildingOfficeIcon class="h-5 w-5" />
+                          </div>
+                          <div class="flex flex-col items-start">
+                            <span
+                              class="text-gray-900 dark:text-white font-semibold text-base group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors duration-200"
+                            >
+                              {{
+                                locale === "ar"
+                                  ? suggestion.name_ar || suggestion.name
+                                  : suggestion.name_en || suggestion.name
+                              }}
+                            </span>
+                            <span
+                              class="text-xs text-gray-500 dark:text-gray-400 font-medium"
+                            >
+                              {{
+                                suggestion.type === "office"
+                                  ? locale === "ar"
+                                    ? suggestion.gov_name_ar ||
+                                      suggestion.gov_name
+                                    : suggestion.gov_name_en ||
+                                      suggestion.gov_name
+                                  : t("common.governorate")
+                              }}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                          <span
+                            class="px-2.5 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 group-hover:bg-primary-50 group-hover:text-primary-700 dark:group-hover:bg-gray-600 dark:group-hover:text-primary-300 transition-colors duration-200"
+                          >
+                            {{ suggestion.count }}
+                            {{
+                              suggestion.type === "office"
+                                ? ""
+                                : t("dashboard.total_offices")
+                            }}
+                          </span>
+                          <svg
+                            class="h-5 w-5 text-gray-300 dark:text-gray-600 group-hover:text-primary-500 dark:group-hover:text-primary-400 transform group-hover:translate-x-1 transition-all duration-300"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </transition>
               </div>
             </div>
 
@@ -167,17 +357,13 @@ onMounted(() => {
             <div
               class="mt-12 grid grid-cols-2 gap-8 max-w-lg mx-auto relative z-20"
             >
-              <div
-                class="bg-white/10 backdrop-blur-xs rounded-lg p-4 shadow-sm"
-              >
+              <div class="bg-white/10 rounded-lg p-4 shadow-sm">
                 <div class="text-3xl font-bold">{{ totalOffices }}</div>
                 <div class="text-primary-100">
                   {{ t("dashboard.total_offices") }}
                 </div>
               </div>
-              <div
-                class="bg-white/10 backdrop-blur-xs rounded-lg p-4 shadow-sm"
-              >
+              <div class="bg-white/10 rounded-lg p-4 shadow-sm">
                 <div class="text-3xl font-bold">
                   {{ Object.keys(governorates).length }}
                 </div>
@@ -190,6 +376,165 @@ onMounted(() => {
         </transition>
       </section>
 
+      <!-- Governorates List -->
+      <section class="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <h2
+          class="text-3xl font-bold text-gray-900 dark:text-white mb-8 text-center"
+        >
+          {{ t("common.governorates") }}
+        </h2>
+
+        <div v-if="loading" class="flex justify-center">
+          <div
+            class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"
+          ></div>
+        </div>
+
+        <div
+          v-else
+          class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+        >
+          <router-link
+            v-for="(offices, govName, index) in filteredGovs"
+            :key="govName"
+            :to="{ name: 'governorate', params: { code: govName } }"
+            class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100 dark:border-gray-700 overflow-hidden"
+          >
+            <div
+              class="h-32 bg-gray-100 dark:bg-gray-700 flex items-center justify-center group-hover:bg-primary-50 dark:group-hover:bg-gray-600 transition-colors"
+            >
+              <img
+                :src="`/${index + 1}.jpg`"
+                :alt="govName"
+                class="w-full h-full object-cover"
+              />
+            </div>
+            <div class="p-6">
+              <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                {{
+                  locale === "ar"
+                    ? offices[0]?.gov_name_ar || govName
+                    : offices[0]?.gov_name_en || govName
+                }}
+              </h3>
+              <p class="text-gray-500 dark:text-gray-400">
+                {{ offices.length }} {{ t("dashboard.total_offices") }}
+              </p>
+            </div>
+          </router-link>
+        </div>
+      </section>
+      <!-- Most Visited Section -->
+      <section
+        class="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"
+        v-if="!loading && mostVisitedGovs.length > 0"
+      >
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <!-- Most Visited Governorates -->
+          <div>
+            <h2
+              class="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-3"
+            >
+              <span
+                class="p-2 rounded-lg bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400"
+              >
+                <MapPinIcon class="h-6 w-6" />
+              </span>
+              {{ t("home.mostVisitedGovernorates") }}
+            </h2>
+            <div class="grid gap-4">
+              <router-link
+                v-for="govName in mostVisitedGovs"
+                :key="govName"
+                :to="{ name: 'governorate', params: { code: govName } }"
+                class="group bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100 dark:border-gray-700 flex items-center justify-between"
+              >
+                <div class="flex items-center gap-4">
+                  <div
+                    class="h-12 w-12 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 group-hover:bg-primary-50 group-hover:text-primary-500 dark:group-hover:bg-gray-600 dark:group-hover:text-primary-400 transition-colors"
+                  >
+                    <MapPinIcon class="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-gray-900 dark:text-white">
+                      {{
+                        locale === "ar"
+                          ? governorates[govName]?.[0]?.gov_name_ar || govName
+                          : governorates[govName]?.[0]?.gov_name_en || govName
+                      }}
+                    </h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                      {{ governorates[govName]?.length || 0 }}
+                      {{ t("dashboard.total_offices") }}
+                    </p>
+                  </div>
+                </div>
+                <div
+                  class="text-gray-300 dark:text-gray-600 group-hover:text-primary-500 dark:group-hover:text-primary-400 transform group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-all"
+                >
+                  <ArrowRightIcon v-if="locale === 'en'" class="h-5 w-5" />
+                  <ArrowLeftIcon v-else class="h-5 w-5" />
+                </div>
+              </router-link>
+            </div>
+          </div>
+
+          <!-- Most Visited Offices -->
+          <div>
+            <h2
+              class="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-3"
+            >
+              <span
+                class="p-2 rounded-lg bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400"
+              >
+                <BuildingOfficeIcon class="h-6 w-6" />
+              </span>
+              {{ t("home.mostVisitedOffices") }}
+            </h2>
+            <div class="grid gap-4">
+              <router-link
+                v-for="office in mostVisitedOffices"
+                :key="office.id"
+                :to="{
+                  name: 'office-details',
+                  params: { id: office._id || office.id },
+                }"
+                class="group bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100 dark:border-gray-700 flex items-center justify-between"
+              >
+                <div class="flex items-center gap-4">
+                  <div
+                    class="h-12 w-12 rounded-lg bg-primary-50 dark:bg-gray-700 flex items-center justify-center text-primary-600 dark:text-primary-400 group-hover:bg-primary-500 group-hover:text-white dark:group-hover:bg-primary-500 dark:group-hover:text-white transition-colors"
+                  >
+                    <BuildingOfficeIcon class="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-gray-900 dark:text-white">
+                      {{
+                        locale === "ar"
+                          ? office.name_ar || office.name
+                          : office.name_en || office.name
+                      }}
+                    </h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                      {{
+                        locale === "ar"
+                          ? office.gov_name_ar || office.govName
+                          : office.gov_name_en || office.govName
+                      }}
+                    </p>
+                  </div>
+                </div>
+                <div
+                  class="text-gray-300 dark:text-gray-600 group-hover:text-primary-500 dark:group-hover:text-primary-400 transform group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-all"
+                >
+                  <ArrowRightIcon v-if="locale === 'en'" class="h-5 w-5" />
+                  <ArrowLeftIcon v-else class="h-5 w-5" />
+                </div>
+              </router-link>
+            </div>
+          </div>
+        </div>
+      </section>
       <!-- About khibrz Section -->
       <section class="py-16 px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-800">
         <div class="max-w-4xl mx-auto">
@@ -223,79 +568,6 @@ onMounted(() => {
               ></div>
             </div>
           </div>
-
-          <!-- Navigation Buttons -->
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <router-link
-              to="/about-us"
-              class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg text-center transition-colors duration-200 shadow-md"
-            >
-              {{ t("nav.about_us") }}
-            </router-link>
-            <router-link
-              to="/disclaimer"
-              class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg text-center transition-colors duration-200 shadow-md"
-            >
-              {{ t("nav.disclaimer") }}
-            </router-link>
-            <router-link
-              to="/terms"
-              class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg text-center transition-colors duration-200 shadow-md"
-            >
-              {{ t("nav.terms") }}
-            </router-link>
-            <router-link
-              to="/contact-us"
-              class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-6 rounded-lg text-center transition-colors duration-200 shadow-md"
-            >
-              {{ t("nav.contact") }}
-            </router-link>
-          </div>
-        </div>
-      </section>
-
-      <!-- Governorates List -->
-      <section class="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <h2
-          class="text-3xl font-bold text-gray-900 dark:text-white mb-8 text-center"
-        >
-          {{ t("common.governorates") }}
-        </h2>
-
-        <div v-if="loading" class="flex justify-center">
-          <div
-            class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"
-          ></div>
-        </div>
-
-        <div
-          v-else
-          class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
-        >
-          <router-link
-            v-for="(offices, govName, index) in filteredGovs"
-            :key="govName"
-            :to="{ name: 'governorate', params: { code: govName } }"
-            class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100 dark:border-gray-700 overflow-hidden"
-          >
-            <div
-              class="h-32 bg-gray-100 dark:bg-gray-700 flex items-center justify-center group-hover:bg-primary-50 dark:group-hover:bg-gray-600 transition-colors"
-            >
-              <img
-                :src="`/public/${index + 1}.jpg`"
-                :alt="govName"
-                class="w-full h-full object-cover"
-              />
-            </div>
-            <div class="p-6">
-              <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                {{ govName }}
-              </h3>
-              <p class="text-gray-500 dark:text-gray-400">
-                {{ offices.length }} {{ t("dashboard.total_offices") }}
-              </p>
-            </div>
-          </router-link>
         </div>
       </section>
     </main>

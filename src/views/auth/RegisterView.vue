@@ -1,33 +1,3 @@
-  confirmPassword: "",
-});
-
-const loading = ref(false);
-const error = ref("");
-
-const handleRegister = async () => {
-  if (form.value.password !== form.value.confirmPassword) {
-    error.value = "Passwords do not match";
-    return;
-  }
-
-  try {
-    loading.value = true;
-    error.value = "";
-    await authStore.register({
-      name: form.value.name,
-      username: form.value.username,
-      email: form.value.email,
-      password: form.value.password,
-    });
-    router.push("/dashboard");
-  } catch (err) {
-    error.value = err.response?.data?.message || "Registration failed";
-  } finally {
-    loading.value = false;
-  }
-};
-</script>
-
 <template>
   <div
     class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8"
@@ -106,3 +76,50 @@ const handleRegister = async () => {
     </div>
   </div>
 </template>
+
+<script setup>
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
+import { useSettingsStore } from "@/stores/settings";
+import BaseInput from "@/components/ui/BaseInput.vue";
+import BaseButton from "@/components/ui/BaseButton.vue";
+
+const router = useRouter();
+const authStore = useAuthStore();
+const settingsStore = useSettingsStore();
+
+const form = ref({
+  name: "",
+  username: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
+});
+
+const loading = ref(false);
+const error = ref("");
+
+const handleRegister = async () => {
+  if (form.value.password !== form.value.confirmPassword) {
+    error.value = "Passwords do not match";
+    return;
+  }
+
+  try {
+    loading.value = true;
+    error.value = "";
+    await authStore.register({
+      name: form.value.name,
+      username: form.value.username,
+      email: form.value.email,
+      password: form.value.password,
+    });
+    router.push("/dashboard");
+  } catch (err) {
+    error.value = err.response?.data?.message || "Registration failed";
+  } finally {
+    loading.value = false;
+  }
+};
+</script>

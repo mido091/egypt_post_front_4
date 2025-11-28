@@ -1,16 +1,45 @@
 <template>
   <footer
-    class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-auto"
+    class="bg-gray-900 dark:bg-gray-950 border-t border-gray-800 dark:border-gray-900 mt-auto"
   >
-    <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div class="md:flex md:items-center md:justify-between">
-        <div
-          class="flex justify-center md:justify-start space-x-6 md:order-2 rtl:space-x-reverse"
-        >
-          <!-- Social links can go here -->
-        </div>
-        <div class="mt-8 md:mt-0 md:order-1">
-          <p class="text-center text-base text-gray-400 dark:text-gray-500">
+    <div class="w-full py-6 px-4 sm:px-6 lg:px-8">
+      <!-- Navigation Links -->
+      <div class="mb-4">
+        <nav class="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+          <router-link
+            to="/about-us"
+            class="text-white/80 hover:text-white text-sm font-medium hover:underline decoration-2 underline-offset-4 transition-all duration-300 ease-in-out"
+          >
+            {{ t("nav.about_us") }}
+          </router-link>
+          <span class="text-white/30">•</span>
+          <router-link
+            to="/disclaimer"
+            class="text-white/80 hover:text-white text-sm font-medium hover:underline decoration-2 underline-offset-4 transition-all duration-300 ease-in-out"
+          >
+            {{ t("nav.disclaimer") }}
+          </router-link>
+          <span class="text-white/30">•</span>
+          <router-link
+            to="/terms"
+            class="text-white/80 hover:text-white text-sm font-medium hover:underline decoration-2 underline-offset-4 transition-all duration-300 ease-in-out"
+          >
+            {{ t("nav.terms") }}
+          </router-link>
+          <span class="text-white/30">•</span>
+          <router-link
+            to="/contact-us"
+            class="text-white/80 hover:text-white text-sm font-medium hover:underline decoration-2 underline-offset-4 transition-all duration-300 ease-in-out"
+          >
+            {{ t("nav.contact") }}
+          </router-link>
+        </nav>
+      </div>
+
+      <!-- Copyright Section -->
+      <div class="flex items-center justify-center">
+        <div class="text-center">
+          <p class="text-sm text-white/60 font-light tracking-wide">
             {{ footerText }}
           </p>
         </div>
