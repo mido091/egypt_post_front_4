@@ -25,34 +25,6 @@
           ></div>
         </div>
       </div>
-
-      <!-- Navigation Buttons -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <router-link
-          to="/about-us"
-          class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg text-center transition-colors duration-200 shadow-md"
-        >
-          {{ $t("nav.about_us") }}
-        </router-link>
-        <router-link
-          to="/disclaimer"
-          class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg text-center transition-colors duration-200 shadow-md"
-        >
-          {{ $t("nav.disclaimer") }}
-        </router-link>
-        <router-link
-          to="/terms"
-          class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg text-center transition-colors duration-200 shadow-md"
-        >
-          {{ $t("nav.terms") }}
-        </router-link>
-        <router-link
-          to="/contact-us"
-          class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-6 rounded-lg text-center transition-colors duration-200 shadow-md"
-        >
-          {{ $t("nav.contact") }}
-        </router-link>
-      </div>
     </div>
   </div>
 </template>
