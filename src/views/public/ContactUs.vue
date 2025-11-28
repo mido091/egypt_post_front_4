@@ -1,0 +1,397 @@
+<template>
+  <div
+    class="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8"
+  >
+    <div class="max-w-4xl mx-auto">
+      <!-- Header -->
+      <div class="text-center mb-12">
+        <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          {{ $t("about.contact_title", { siteName: settingsStore.siteName }) }}
+        </h1>
+        <p class="text-lg text-gray-600 dark:text-gray-400">
+          {{
+            locale === "ar"
+              ? "تواصل معنا عبر وسائل التواصل الاجتماعي أو املأ النموذج أدناه"
+              : "Connect with us through social media or fill out the form below"
+          }}
+        </p>
+      </div>
+
+      <!-- Contact Form -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+          {{ locale === "ar" ? "أرسل لنا رسالة" : "Send us a message" }}
+        </h2>
+
+        <form @submit.prevent="handleSubmit" class="space-y-6">
+          <!-- Name Field -->
+          <div>
+            <label
+              for="name"
+              class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2"
+            >
+              {{ $t("contact.name") }} <span class="text-red-500">*</span>
+            </label>
+            <input
+              id="name"
+              v-model="form.name"
+              type="text"
+              required
+              class="block w-full h-12 px-4 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/50 sm:text-base transition-colors"
+              :placeholder="$t('contact.name_placeholder')"
+            />
+          </div>
+
+          <!-- Email Field -->
+          <div>
+            <label
+              for="email"
+              class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2"
+            >
+              {{ $t("contact.email") }} <span class="text-red-500">*</span>
+            </label>
+            <input
+              id="email"
+              v-model="form.email"
+              type="email"
+              required
+              class="block w-full h-12 px-4 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/50 sm:text-base transition-colors"
+              :placeholder="$t('contact.email_placeholder')"
+            />
+          </div>
+
+          <!-- Subject Field -->
+          <div>
+            <label
+              for="subject"
+              class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2"
+            >
+              {{ $t("contact.subject") }} <span class="text-red-500">*</span>
+            </label>
+            <input
+              id="subject"
+              v-model="form.subject"
+              type="text"
+              required
+              class="block w-full h-12 px-4 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/50 sm:text-base transition-colors"
+              :placeholder="$t('contact.subject_placeholder')"
+            />
+          </div>
+
+          <!-- Message Field -->
+          <div>
+            <label
+              for="message"
+              class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2"
+            >
+              {{ $t("contact.message") }} <span class="text-red-500">*</span>
+            </label>
+            <textarea
+              id="message"
+              v-model="form.message"
+              required
+              rows="6"
+              class="block w-full px-4 py-3 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/50 sm:text-base transition-colors resize-none"
+              :placeholder="$t('contact.message_placeholder')"
+            ></textarea>
+          </div>
+
+          <!-- Submit Button -->
+          <div>
+            <button
+              type="submit"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 shadow-md focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+            >
+              {{ $t("contact.submit") }}
+            </button>
+          </div>
+        </form>
+
+        <!-- Success Message -->
+        <transition name="fade">
+          <div
+            v-if="showSuccess"
+            class="mt-6 p-4 bg-green-100 dark:bg-green-900/30 border border-green-400 dark:border-green-700 text-green-700 dark:text-green-300 rounded-lg"
+          >
+            <p class="font-semibold">{{ $t("contact.success_message") }}</p>
+          </div>
+        </transition>
+      </div>
+
+      <!-- Social Links Section -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
+        <h2
+          class="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center"
+        >
+          {{
+            locale === "ar"
+              ? "تابعنا على وسائل التواصل"
+              : "Follow us on social media"
+          }}
+        </h2>
+
+        <!-- Loading State -->
+        <div v-if="loading" class="flex justify-center items-center py-12">
+          <div
+            class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"
+          ></div>
+        </div>
+
+        <!-- Social Links -->
+        <div
+          v-else-if="visibleSocialLinks.length > 0"
+          class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+        >
+          <a
+            v-for="link in visibleSocialLinks"
+            :key="link.provider"
+            :href="link.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="flex flex-col items-center justify-center p-6 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200 group"
+          >
+            <component
+              :is="getIcon(link.provider)"
+              class="w-12 h-12 mb-3 text-gray-700 dark:text-gray-300 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"
+            />
+            <span
+              class="text-sm font-medium text-gray-900 dark:text-white capitalize"
+            >
+              {{ link.provider }}
+            </span>
+          </a>
+        </div>
+
+        <div v-else class="text-center py-12 text-gray-500 dark:text-gray-400">
+          {{
+            locale === "ar"
+              ? "لا توجد روابط تواصل متاحة حالياً"
+              : "No contact links available at the moment"
+          }}
+        </div>
+      </div>
+
+      <!-- Back Button -->
+      <div class="mt-8 text-center">
+        <router-link
+          to="/"
+          class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors duration-200 shadow-md"
+        >
+          {{ $t("common.back") }}
+        </router-link>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, h } from "vue";
+import { useI18n } from "vue-i18n";
+import publicApi from "@/api/public";
+import { useSettingsStore } from "@/stores/settings";
+
+const { locale } = useI18n();
+const settingsStore = useSettingsStore();
+const loading = ref(false);
+const socialLinks = ref([]);
+const showSuccess = ref(false);
+
+// Form data
+const form = ref({
+  name: "",
+  email: "",
+  subject: "",
+  message: "",
+});
+
+// Simple icon components (same as before)
+const FacebookIcon = () =>
+  h(
+    "svg",
+    {
+      xmlns: "http://www.w3.org/2000/svg",
+      fill: "currentColor",
+      viewBox: "0 0 24 24",
+    },
+    [
+      h("path", {
+        d: "M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z",
+      }),
+    ]
+  );
+
+const TelegramIcon = () =>
+  h(
+    "svg",
+    {
+      xmlns: "http://www.w3.org/2000/svg",
+      fill: "currentColor",
+      viewBox: "0 0 24 24",
+    },
+    [
+      h("path", {
+        d: "M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z",
+      }),
+    ]
+  );
+
+const WhatsAppIcon = () =>
+  h(
+    "svg",
+    {
+      xmlns: "http://www.w3.org/2000/svg",
+      fill: "currentColor",
+      viewBox: "0 0 24 24",
+    },
+    [
+      h("path", {
+        d: "M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z",
+      }),
+    ]
+  );
+
+const XIcon = () =>
+  h(
+    "svg",
+    {
+      xmlns: "http://www.w3.org/2000/svg",
+      fill: "currentColor",
+      viewBox: "0 0 24 24",
+    },
+    [
+      h("path", {
+        d: "M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z",
+      }),
+    ]
+  );
+
+const InstagramIcon = () =>
+  h(
+    "svg",
+    {
+      xmlns: "http://www.w3.org/2000/svg",
+      fill: "currentColor",
+      viewBox: "0 0 24 24",
+    },
+    [
+      h("path", {
+        d: "M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z",
+      }),
+    ]
+  );
+
+const GmailIcon = () =>
+  h(
+    "svg",
+    {
+      xmlns: "http://www.w3.org/2000/svg",
+      fill: "currentColor",
+      viewBox: "0 0 24 24",
+    },
+    [
+      h("path", {
+        d: "M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z",
+      }),
+    ]
+  );
+
+const DefaultIcon = () =>
+  h(
+    "svg",
+    {
+      xmlns: "http://www.w3.org/2000/svg",
+      fill: "none",
+      viewBox: "0 0 24 24",
+      stroke: "currentColor",
+    },
+    [
+      h("path", {
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
+        "stroke-width": "2",
+        d: "M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1",
+      }),
+    ]
+  );
+
+const getIcon = (provider) => {
+  const providerLower = provider?.toLowerCase() || "";
+  switch (providerLower) {
+    case "facebook":
+      return FacebookIcon;
+    case "telegram":
+      return TelegramIcon;
+    case "whatsapp":
+      return WhatsAppIcon;
+    case "x":
+    case "twitter":
+      return XIcon;
+    case "instagram":
+      return InstagramIcon;
+    case "gmail":
+    case "email":
+      return GmailIcon;
+    default:
+      return DefaultIcon;
+  }
+};
+
+const visibleSocialLinks = computed(() => {
+  return socialLinks.value.filter((link) => link.url && link.url.trim() !== "");
+});
+
+const handleSubmit = () => {
+  // Reset form
+  form.value = {
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
+  };
+
+  // Show success message
+  showSuccess.value = true;
+
+  // Hide success message after 3.5 seconds
+  setTimeout(() => {
+    showSuccess.value = false;
+  }, 3500);
+};
+
+const fetchSocialLinks = async () => {
+  loading.value = true;
+  try {
+    const response = await publicApi.getSocialLinks();
+    let data = response.data;
+
+    // Handle different response formats
+    if (data.success && data.data) {
+      data = data.data;
+    }
+
+    if (Array.isArray(data)) {
+      socialLinks.value = data;
+    }
+  } catch (error) {
+    console.error("Failed to fetch social links:", error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(() => {
+  fetchSocialLinks();
+});
+</script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

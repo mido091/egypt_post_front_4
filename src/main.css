@@ -1,0 +1,65 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cairo:wght@400;600;700&display=swap');
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Inter', 'Cairo', sans-serif;
+
+  /* Primary - #0B74FF */
+  --color-primary-50: #E6F2FF;
+  --color-primary-100: #CCE5FF;
+  --color-primary-200: #99CCFF;
+  --color-primary-300: #66B2FF;
+  --color-primary-400: #3399FF;
+  --color-primary-500: #0B74FF;
+  --color-primary-600: #075CD8;
+  --color-primary-700: #0545B0;
+  --color-primary-800: #032E88;
+  --color-primary-900: #021760;
+
+  /* Accent/Success - Teal */
+  --color-accent-50: #F0FDFA;
+  --color-accent-100: #CCFBF1;
+  --color-accent-200: #99F6E4;
+  --color-accent-300: #5EEAD4;
+  --color-accent-400: #2DD4BF;
+  --color-accent-500: #14B8A6;
+  --color-accent-600: #0D9488;
+  --color-accent-700: #0F766E;
+  --color-accent-800: #115E59;
+  --color-accent-900: #134E4A;
+}
+
+/* Base styles */
+body {
+  @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 font-sans antialiased;
+}
+
+/* Smooth transitions */
+* {
+  @apply transition-colors duration-200;
+}
+
+/* Focus styles */
+*:focus-visible {
+  @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100 dark:bg-gray-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-500;
+}
